@@ -1,15 +1,19 @@
 from multiprocessing import Manager, Pool
 import hashlib
-import time
-import os
+import logging
 import git
-import random
 
-from mq_server import ExampleConsumer
+from mq_server import Consumer
 from config import *
 
-def start_consumer(queue_map):
-    example = ExampleConsumer(
+LOG_FORMAT = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
+              '-35s %(lineno) -5d: %(message)s')
+LOGGER = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
+
+def consumer(queue_map):
+    LOGGER.info("Start Consumer Processing")
+    consumer = Consumer(
         "amqp://{username}:{passwd}@{host}:{port}{virtualhost}".format(
             username=MQ_USERNAME,
             passwd=MQ_PASSWORD,
@@ -18,24 +22,32 @@ def start_consumer(queue_map):
             virtualhost=MQ_VIRTUAL_HOST
         ), queue_map, QUEUE_NAME)
     try:
-        example.run()
-    except KeyboardInterrupt:
-        example.stop()
+        consumer.run()
+    except KeyboardInterrupt as e:
+        LOGGER.warning(e)
+        consumer.stop()
 
-def pull(cd, q, index):
+def worker(cd, q, index):
+    LOGGER.info("Start Worker Processing")
     while True:
         with cd:
             if q.empty():
                 cd.wait()
             else:
-                q.get_nowait()
+                order = q.get_nowait()
                 try:
                     git_detail_info = git_map[index]
                     git_path = git_detail_info.get("git_path")
                     git_remote_name = git_detail_info.get("git_remote_name")
                     git_branch = git_detail_info.get("git_branch")
                     git_url = git_detail_info.get("git_url")
-                    print(git_branch)
+
+                    LOGGER.info("Start {order} {git_path} {git_remote_name} "
+                                "{git_branch} {git_url}".format(
+                        git_path=git_path, git_branch=git_branch, order=order,
+                        git_url=git_url, git_remote_name=git_remote_name,
+                    ))
+
                     empty_repo = git.Repo.init(git_path)
                     remote_list = empty_repo.remotes
                     origin = remote_list.origin if len(remote_list) > 0 else False
@@ -52,8 +64,13 @@ def pull(cd, q, index):
                     getattr(empty_repo.heads, git_branch).checkout()
                     origin.pull()
 
+                    LOGGER.info("End {order} {git_path} {git_remote_name} "
+                                "{git_branch} {git_url}".format(
+                        git_path=git_path, git_branch=git_branch, order=order,
+                        git_url=git_url, git_remote_name=git_remote_name,
+                    ))
                 except Exception as e:
-                    print(e)
+                    LOGGER.error(e)
 
 if __name__ == "__main__":
     manager = Manager()
@@ -76,9 +93,9 @@ if __name__ == "__main__":
             )
             route_key = h.hexdigest()
             queue_map[route_key] = (queue, cd)
-            p.apply_async(pull, (cd,queue, index))
+            p.apply_async(worker, (cd,queue, index))
 
-        p.apply_async(start_consumer, (queue_map,))
+        p.apply_async(consumer, (queue_map,))
 
         p.close()
         p.join()

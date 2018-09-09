@@ -22,7 +22,7 @@ class Publisher(object):
            route_key = h.hexdigest()
            self.routings[route_key] = git
 
-    def start_publisher(self):
+    def start_publisher(self, order):
         full_url = pika.URLParameters(
             url="amqp://{username}:{passwd}@{host}:{port}{virtualhost}".format(
                 username=cfg.MQ_USERNAME,
@@ -42,5 +42,5 @@ class Publisher(object):
         for route_key in self.routings.keys():
             self.channel.basic_publish(exchange='message',
                                   routing_key=route_key,
-                                  body="Hello", )
+                                  body=order, )
         self.connection.close()

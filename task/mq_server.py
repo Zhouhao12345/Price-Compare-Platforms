@@ -6,13 +6,10 @@ import json
 import logging
 import time
 
-LOG_FORMAT = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
-              '-35s %(lineno) -5d: %(message)s')
+
 LOGGER = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 
-
-class ExampleConsumer(object):
+class Consumer(object):
     EXCHANGE = 'message'
     EXCHANGE_TYPE = 'direct'
     QUEUE = "localhost"
@@ -25,22 +22,7 @@ class ExampleConsumer(object):
         self._consumer_tag = None
         self._url = amqp_url
         self.QUEUE = queue_name
-        self.routings = {}
-        for git in cfg.git_map:
-            git_url = git.get("git_url", False)
-            git_remote_name = git.get("git_remote_name", False)
-            git_branch = git.get("git_branch", False)
-            if not git_url or not git_remote_name or not git_branch:
-                raise Exception("Please make sure git url, path and "
-                                "remote name had been typed")
-
-            h = hashlib.md5()
-            h.update((git_url + git_remote_name + git_branch).encode(
-                encoding="utf-8")
-            )
-            route_key = h.hexdigest()
-            git["queue_condition"] = queue_map[route_key]
-            self.routings[route_key] = git
+        self.exchange_processing = queue_map
 
     def connect(self):
         LOGGER.info('Connecting to %s', self._url)
@@ -113,9 +95,7 @@ class ExampleConsumer(object):
     def on_queue_declareok(self, method_frame):
         LOGGER.info('Binding %s to %s with %s',
                     self.EXCHANGE, self.QUEUE, self.ROUTING_KEY)
-        # self._channel.queue_bind(self.on_bindok, self.QUEUE,
-        #                          self.EXCHANGE, self.ROUTING_KEY)
-        for route_key in self.routings.keys():
+        for route_key in self.exchange_processing.keys():
             self._channel.queue_bind(self.on_bindok, exchange=self.EXCHANGE,
                                      queue=self.QUEUE,
                                      routing_key=route_key, )
@@ -141,11 +121,9 @@ class ExampleConsumer(object):
             self._channel.close()
 
     def on_message(self, unused_channel, basic_deliver, properties, body):
-        queue_condition = self.routings[basic_deliver.routing_key].get(
-            "queue_condition"
-        )
+        queue_condition = self.exchange_processing[basic_deliver.routing_key]
         queue_condition[0].put_nowait(
-            "pull"
+            body
         )
         with queue_condition[1]:
             queue_condition[1].notify_all()

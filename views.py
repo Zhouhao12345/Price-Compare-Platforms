@@ -22,8 +22,8 @@ class View(object):
 class Test(View):
 
     def get(self, request, **kwargs):
-        # p = Publisher()
-        # p.start_publisher()
+        p = Publisher()
+        p.start_publisher(order="pull")
         return Response(
             json.dumps({
                 "code":1,
