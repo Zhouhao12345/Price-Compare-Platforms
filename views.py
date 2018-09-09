@@ -36,9 +36,6 @@ class Test(View):
         git_url, git_remote_name, git_branch = \
             DeserializeHook.deserialize(agent=agent, payload=payload)
         p = Publisher()
-        print(git_url)
-        print(git_remote_name)
-        print(git_branch)
         p.start_publisher(
             "pull",
             git_url=git_url,
