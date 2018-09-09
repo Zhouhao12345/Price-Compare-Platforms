@@ -1,8 +1,6 @@
 from werkzeug.wrappers import Response
 
 import json
-import git
-import os
 
 from tasks import Publisher
 

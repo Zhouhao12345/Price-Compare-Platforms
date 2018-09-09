@@ -75,7 +75,6 @@ def worker(cd, q, index):
 if __name__ == "__main__":
     manager = Manager()
     queue_map = {}
-    cd = manager.Condition()
     with Pool(len(git_map) + 1) as p:
         for index, git in enumerate(git_map):
             queue = manager.Queue()

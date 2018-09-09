@@ -1,10 +1,5 @@
 import pika
-import config as cfg
-import hashlib
-import git
-import json
 import logging
-import time
 
 
 LOGGER = logging.getLogger(__name__)
