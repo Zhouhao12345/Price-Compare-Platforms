@@ -16,7 +16,7 @@ class DeserializeHook(object):
         agent = kwargs.get("agent", settings.support_agents[0])
         payload_str = kwargs.get("payload", "")
         payload_json = json.loads(payload_str)
-        ser = DeserializeHook()
+        ser = cls()
         if agent not in ser.support_agents:
             raise Exception("Not support git agent!!")
         return getattr(gitadapters, ser.support_agents[agent])(payload_json)
