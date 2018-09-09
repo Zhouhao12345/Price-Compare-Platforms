@@ -20,8 +20,8 @@ class View(object):
 class Test(View):
 
     def get(self, request, **kwargs):
-        p = Publisher()
-        p.start_publisher(order="pull")
+#        p = Publisher()
+#        p.start_publisher(order="pull")
         return Response(
             json.dumps({
                 "code":1,
@@ -34,6 +34,11 @@ class Test(View):
     def post(self, request, **kwargs):
         for key , value in request.form.items():
              print(key+":"+value)
+             payload = json.loads(value)
+             ssh_url = payload["repository"]["ssh_url"]
+             branch = payload["ref"].split("/")[2]
+             name = "origin"
+             print(ssh_url+branch+name)	
         return Response(
             json.dumps({
                 "code": 1,
