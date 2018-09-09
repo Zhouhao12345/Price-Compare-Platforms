@@ -5,24 +5,19 @@ import hashlib
 
 class Publisher(object):
 
-    def __init__(self):
-        self.routings = {}
-        for git in cfg.git_map:
-           git_url = git.get("git_url",False)
-           git_remote_name = git.get("git_remote_name", False)
-           git_branch = git.get("git_branch", False)
-           if not git_url or not git_remote_name or not git_branch:
-               raise Exception("Please make sure git url, path and "
-                               "remote name had been typed")
+    @staticmethod
+    def md5_route_key(git_url="",git_remote_name="", git_branch=""):
+        if not git_url or not git_remote_name or not git_branch:
+            raise Exception("Please make sure git url, path and "
+                            "remote name had been typed")
 
-           h = hashlib.md5()
-           h.update((git_url+git_remote_name+git_branch).encode(
-               encoding="utf-8")
-           )
-           route_key = h.hexdigest()
-           self.routings[route_key] = git
+        h = hashlib.md5()
+        h.update((git_url + git_remote_name + git_branch).encode(
+            encoding="utf-8")
+        )
+        return h.hexdigest()
 
-    def start_publisher(self, order):
+    def start_publisher(self, order, **kwargs):
         full_url = pika.URLParameters(
             url="amqp://{username}:{passwd}@{host}:{port}{virtualhost}".format(
                 username=cfg.MQ_USERNAME,
@@ -39,8 +34,8 @@ class Publisher(object):
             exchange_type='direct',
             durable=True
         )
-        for route_key in self.routings.keys():
-            self.channel.basic_publish(exchange='message',
+        route_key = Publisher.md5_route_key(**kwargs)
+        self.channel.basic_publish(exchange='message',
                                   routing_key=route_key,
                                   body=order, )
         self.connection.close()

@@ -3,6 +3,7 @@ from werkzeug.wrappers import Response
 import json
 
 from tasks import Publisher
+from adapter import DeserializeHook
 
 class View(object):
     def __init__(self):
@@ -20,8 +21,6 @@ class View(object):
 class Test(View):
 
     def get(self, request, **kwargs):
-#        p = Publisher()
-#        p.start_publisher(order="pull")
         return Response(
             json.dumps({
                 "code":1,
@@ -32,13 +31,20 @@ class Test(View):
         )
 
     def post(self, request, **kwargs):
-        for key , value in request.form.items():
-             print(key+":"+value)
-             payload = json.loads(value)
-             ssh_url = payload["repository"]["ssh_url"]
-             branch = payload["ref"].split("/")[2]
-             name = "origin"
-             print(ssh_url+branch+name)	
+        agent = request.environ["HTTP_USER_AGENT"]
+        payload = request.form["payload"]
+        git_url, git_remote_name, git_branch = \
+            DeserializeHook.deserialize(agent=agent, payload=payload)
+        p = Publisher()
+        print(git_url)
+        print(git_remote_name)
+        print(git_branch)
+        p.start_publisher(
+            "pull",
+            git_url=git_url,
+            git_remote_name=git_remote_name,
+            git_branch=git_branch
+        )
         return Response(
             json.dumps({
                 "code": 1,
