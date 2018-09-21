@@ -1,12 +1,12 @@
-MQ_HOST = "0.0.0.0"
+MQ_HOST = "rabbit"
 MQ_PORT = "5672"
-MQ_USERNAME = "zhouhao"
-MQ_PASSWORD = "zh.123"
+MQ_USERNAME = "zhouhaozz"
+MQ_PASSWORD = "Zhouhao123"
 MQ_VIRTUAL_HOST = "/"
 
-support_agents = [
-    {
-        "agent_name" : "GitHub-Hookshot/c8ef286",
-        "agent_func" : "gitHub_hookshot"
-    },
+ES_HOST = "0.0.0.0"
+ES_PORT = 9200
+
+MIDDLEWARE_LIST = [
+    "middleware.crosMiddleware"
 ]

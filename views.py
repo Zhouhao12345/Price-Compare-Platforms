@@ -1,9 +1,8 @@
 from werkzeug.wrappers import Response
+from models.backend import es
 
 import json
-
-from tasks import Publisher
-from adapter import DeserializeHook
+import math
 
 class View(object):
     def __init__(self):
@@ -31,21 +30,31 @@ class Test(View):
         )
 
     def post(self, request, **kwargs):
-        agent = request.environ["HTTP_USER_AGENT"]
-        payload = request.form["payload"]
-        git_url, git_remote_name, git_branch = \
-            DeserializeHook.deserialize(agent=agent, payload=payload)
-        p = Publisher()
-        p.start_publisher(
-            "pull",
-            git_url=git_url,
-            git_remote_name=git_remote_name,
-            git_branch=git_branch
+        name_key_words = request.form["name_key_words"]
+        size = request.form["size"]
+        page = request.form["page"]
+
+        result_list, max_size = es().search(
+            index="products_list_spider",
+            size=size,
+            from_=(int(page)-1)*int(size),
+            body={
+                "query": {
+                    "match": {
+                        "name": name_key_words
+                    }
+                }
+            }
         )
         return Response(
             json.dumps({
                 "code": 1,
-                "message": "success"
+                "message": "success",
+                "data": {
+                    "product_list": result_list,
+                    "max_page": math.ceil(int(max_size) / int(size)),
+                    "cur_page": int(page)
+                }
             }),
             content_type="application/json",
             status=200
